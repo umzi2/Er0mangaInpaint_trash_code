@@ -580,27 +580,44 @@ class LaMa(nn.Module):
     def forward(self, input):
         return self.model(input)
 
-if __name__ == "__main__":
-    from pepeline import read,ImgColor,ImgFormat,save,cvt_color,CVTColor
-    m = LaMa()
-    state = torch.load("/run/media/umzi/H/PythonProject9/lama_clean.pth",map_location="cpu")
-    m.load_state_dict(state)
-    img = read("/run/media/umzi/H/PythonProject9/45b03d8f-1c63-4f42-a143-d9ba573614a28.png",ImgColor.RGB,ImgFormat.F32)
 
-    img_h,img_w = img.shape[:2]
-    img = img[:img_h//32*32,:img_w//32*32]
-    save(img,"test2.png")
-    mask = read("/run/media/umzi/H/PythonProject9/45b03d8f-1c63-4f42-a143-d9ba573614a8.png",ImgColor.GRAY,ImgFormat.F32)[:img_h//32*32,:img_w//32*32]
-    img_t = torch.tensor(img.transpose(2,0,1),dtype=torch.float32,device=torch.device("cuda")).unsqueeze(0)
-    mask_t = torch.tensor(mask[None,...],dtype=torch.float32,device=torch.device("cuda")).unsqueeze(0)
-    img_t = img_t*(1-mask_t)
-    img_t = torch.cat((img_t,mask_t),dim=1)
+if __name__ == "__main__":
+    from pepeline import read, ImgColor, ImgFormat, save, cvt_color, CVTColor
+
+    m = LaMa()
+    state = torch.hub.load_state_dict_from_url(
+        "https://github.com/umzi2/Er0mangaInpaint_trash_code/releases/download/v1.0.0/lama_clean.pth",
+        map_location="cpu",
+    )
+    m.load_state_dict(state)
+    img = read(
+        "/run/media/umzi/H/PythonProject9/45b03d8f-1c63-4f42-a143-d9ba573614a28.png",
+        ImgColor.RGB,
+        ImgFormat.F32,
+    )
+
+    img_h, img_w = img.shape[:2]
+    img = img[: img_h // 32 * 32, : img_w // 32 * 32]
+    save(img, "test2.png")
+    mask = read(
+        "/run/media/umzi/H/PythonProject9/45b03d8f-1c63-4f42-a143-d9ba573614a8.png",
+        ImgColor.GRAY,
+        ImgFormat.F32,
+    )[: img_h // 32 * 32, : img_w // 32 * 32]
+    img_t = torch.tensor(
+        img.transpose(2, 0, 1), dtype=torch.float32, device=torch.device("cuda")
+    ).unsqueeze(0)
+    mask_t = torch.tensor(
+        mask[None, ...], dtype=torch.float32, device=torch.device("cuda")
+    ).unsqueeze(0)
+    img_t = img_t * (1 - mask_t)
+    img_t = torch.cat((img_t, mask_t), dim=1)
     m.cuda()
     with torch.no_grad():
         out = m.forward(img_t)
-        out = out.squeeze().detach().cpu().numpy().transpose(1,2,0).copy()
-        out = cvt_color(out,CVTColor.RGB2Gray_2020)
-        out = (img *(1-mask[...,None])+out[...,None]*mask[...,None]).clip(0,1)
-        save(out,"test.png")
-
-
+        out = out.squeeze().detach().cpu().numpy().transpose(1, 2, 0).copy()
+        out = cvt_color(out, CVTColor.RGB2Gray_2020)
+        out = (img * (1 - mask[..., None]) + out[..., None] * mask[..., None]).clip(
+            0, 1
+        )
+        save(out, "test.png")
